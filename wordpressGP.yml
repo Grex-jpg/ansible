@@ -1,0 +1,79 @@
+---
+- name: WordPress Andmebaasi ja rakenduse seadistamine
+  hosts: debian
+  become: yes
+  tasks:
+
+    - name: Paigaldame Python MySQL mooduli (Ansible jaoks)
+      apt:
+        name: python3-pymysql
+        state: present
+        update_cache: yes
+
+    - name: Loome andmebaas nimega wpdatabase
+      mysql_db:
+        name: wpdatabase
+        state: present
+
+    - name: Loome MySQL kasutaja wpuser ja määrame õigused
+      mysql_user:
+        name: wpuser
+        host: "%"
+        priv: "wpdatabase.*:ALL,GRANT"
+        plugin: caching_sha2_password
+        plugin_auth_string: qwerty
+        state: present
+
+    - name: Paigaldame PHP ja Apache PHP mooduli
+      apt:
+        name:
+          - php
+          - libapache2-mod-php
+        state: present
+        update_cache: yes
+
+    - name: Paigaldame PHP MySQL mooduli (mysqli)
+      apt:
+        name: php-mysql
+        state: present
+
+    - name: Laeme alla WordPressi
+      get_url:
+        url: https://wordpress.org/latest.tar.gz
+        dest: /tmp/wordpress.tar.gz
+        mode: '0644'
+
+    - name: Pakime WordPressi lahti
+      unarchive:
+        src: /tmp/wordpress.tar.gz
+        dest: /var/www/html/
+        remote_src: yes
+
+    - name: Kopeerime wp-config-sample.php kui wp-config.php
+      copy:
+        src: /var/www/html/wordpress/wp-config-sample.php
+        dest: /var/www/html/wordpress/wp-config.php
+        remote_src: yes
+
+    - name: Määrame andmebaasi nime
+      lineinfile:
+        path: /var/www/html/wordpress/wp-config.php
+        regexp: "database_name_here"
+        line: "define('DB_NAME', 'wpdatabase');"
+
+    - name: Määrame andmebaasi kasutajanime
+      lineinfile:
+        path: /var/www/html/wordpress/wp-config.php
+        regexp: "username_here"
+        line: "define('DB_USER', 'wpuser');"
+
+    - name: Määrame andmebaasi kasutaja parooli
+      lineinfile:
+        path: /var/www/html/wordpress/wp-config.php
+        regexp: "password_here"
+        line: "define('DB_PASSWORD', 'qwerty');"
+
+    - name: Taaskäivitame Apache teenuse
+      service:
+        name: apache2
+        state: restarted
