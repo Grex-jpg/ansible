@@ -1,0 +1,46 @@
+---
+- hosts: webservers
+  tasks:
+    - name: install apache2 (Debian) ja (CentOS)
+      package:
+        name: "{{ apache_paket }}"
+        state: latest
+
+    - name: httpd käivitamine
+      ansible.builtin.service:
+        name: "{{ apache_paket }}"
+        state: started
+        enabled: yes
+
+    - name: Allow HTTP firewalli abil
+      ansible.posix.firewalld:
+        service: http
+        permanent: true
+        state: enabled
+        immediate: true
+      when: ansible_distribution == "CentOS"
+
+    - name: Muudame /home/gregor/ kataloogi õigused (711)
+      file:
+        path: /home/gregor/
+        mode: 0711
+
+    - name: Loome public_html kataloog user_ile
+      file:
+          path: /home/gregor/public_html
+          owner: gregor
+          group: gregor
+          mode: 0755
+          state: directory
+
+    - name: Lubame userdir mod (Debian)
+      apache2_module:
+        name: userdir
+        state: present
+      when: ansible_distribution == "Debian"
+
+    - name: Muudame userdir.conf
+      lineinfile:
+        dest: "{{ asukoht_userdir_conf }}"
+        ragexp: "Require method GET POST OPTIONS"
+        line: "Require all granted"
