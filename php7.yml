@@ -1,0 +1,36 @@
+
+---
+- hosts: webservers
+  tasks:
+    - name: installeerime php
+      apt:
+        name: php
+        update_cache: yes
+        state: latest
+      when: ansible_distribution == "Debian"
+
+    - name: installeerime libapache2-mod-php
+      apt:
+        name: libapache2-mod-php
+        update_cache: yes
+        state: latest
+      when: ansible_distribution == "Debian"
+
+    - name: installeerime php-mysql
+      apt:
+        name: php-mysql
+        update_cache: yes
+        state: latest
+      when: ansible_distribution == "Debian"
+
+    - name: Loo phpinfo.php fail
+      copy:
+        dest: /var/www/html/phpinfo.php
+        content: |
+          <?php
+          phpinfo();
+          ?>
+        owner: gregor
+        group: gregor
+        mode: '0644'
+      when: ansible_distribution == "Debian"
