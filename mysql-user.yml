@@ -1,0 +1,31 @@
+---
+- hosts: webservers
+  become: yes
+  vars:
+    mysql_root_password: qwerty
+
+  tasks:
+
+    - name: Paigalda PyMySQL
+      apt:
+        name: python3-pymysql
+        state: present
+
+    - name: Muuda root autentimine paroolipõhiseks
+      community.mysql.mysql_query:
+        login_unix_socket: /run/mysqld/mysqld.sock
+        query: |
+          ALTER USER 'root'@'localhost'
+          IDENTIFIED WITH caching_sha2_password
+          BY '{{ mysql_root_password }}';
+
+    - name: Loo /root/.my.cnf
+      copy:
+        dest: /root/.my.cnf
+        owner: root
+        group: root
+        mode: '0600'
+        content: |
+          [client]
+          user=root
+          password={{ mysql_root_password }}

@@ -1,0 +1,42 @@
+---
+- hosts: webservers
+  become: yes
+  vars:
+    mysql_root_password: "qwerty"
+
+  tasks:
+    - name: Install PyMySQL (recommended connector)
+      ansible.builtin.apt:
+        name: python3-pymysql
+        state: present
+        update_cache: yes
+
+    - name: Set MySQL root password and auth plugin
+      community.mysql.mysql_user:
+        name: root
+        host: localhost
+        password: "{{ mysql_root_password }}"
+        plugin: caching_sha2_password
+        login_unix_socket: /run/mysqld/mysqld.sock
+        check_implicit_admin: true
+        priv: "*.*:ALL,GRANT"
+        state: present
+
+    - name: Disable remote root login
+      community.mysql.mysql_user:
+        name: root
+        host: "%"
+        state: absent
+        login_unix_socket: /run/mysqld/mysqld.sock
+        check_implicit_admin: true
+
+    - name: Create /root/.my.cnf for root
+      ansible.builtin.copy:
+        dest: /root/.my.cnf
+        owner: root
+        group: root
+        mode: "0600"
+        content: |
+          [client]
+          user=root
+          password={{ mysql_root_password }}
